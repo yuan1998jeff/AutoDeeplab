@@ -167,13 +167,10 @@ class AutoDeeplab (nn.Module) :
         self.level_32 = []
 
         # self._init_level_arr (x)
-        temp = self.stem0 (x)
-        self.level_2.append (self.stem1 (temp))
-        self.level_4.append (self.stem2 (self.level_2[-1]))
-        weight_cells = F.softmax(self.alphas_cell, dim=-1)
-        weight_network = F.softmax (self.alphas_network, dim = -1)
+        self.level_4.append (self.stem2 (self.stem1 (self.stem0 (x))))
+        
         count = 0
-        weight_network = F.softmax (self.alphas_network, dim = -1)
+        
         weight_cells = F.softmax(self.alphas_cell, dim=-1)
         for layer in range (self._num_layers) :
 
@@ -182,24 +179,25 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level8_new = self.cells[count] (None, self.level_4[-1], weight_cells)
                 count += 1
-                self.level_4.append (level4_new * self.alphas_network[layer][0][0])
-                self.level_8.append (level8_new * self.alphas_network[layer][0][1])
+                self.level_4.append (level4_new * 1/3)
+                self.level_8.append (level8_new * 1/3)
                 # print ((self.level_4[-2]).size (),  (self.level_4[-1]).size())
             elif layer == 1 :
                 level4_new_1 = self.cells[count] (self.level_4[-2], self.level_4[-1], weight_cells)
                 count += 1
                 level4_new_2 = self.cells[count] (self.level_4[-2], self.level_8[-1], weight_cells)
                 count += 1
-                level4_new = self.alphas_network[layer][0][0] * level4_new_1 + self.alphas_network[layer][0][1] * level4_new_2
+                weight = F.softmax(self.alphas_network[layer][0][:2]) * 2/3
+                level4_new = weight[0] * level4_new_1 + weight[1] * level4_new_2
 
                 level8_new_1 = self.cells[count] (None, self.level_4[-1], weight_cells)
                 count += 1
                 level8_new_2 = self.cells[count] (None, self.level_8[-1], weight_cells)
                 count += 1
-                level8_new = self.alphas_network[layer][1][0] * level8_new_1 + self.alphas_network[layer][1][1] * level8_new_2
+                weight = F.softmax(self.alphas_network[layer][1][:2]) * 2/3
+                level8_new = weight[0] * level8_new_1 + weight[1] * level8_new_2
 
-                level16_new = self.cells[count] (None, self.level_8[-1], weight_cells)
-                level16_new = level16_new * self.alphas_network[layer][1][2]
+                level16_new = self.cells[count] (None, self.level_8[-1], weight_cells) * 1/3
                 count += 1
 
 
@@ -212,26 +210,27 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level4_new_2 = self.cells[count] (self.level_4[-2], self.level_8[-1], weight_cells)
                 count += 1
-                level4_new = self.alphas_network[layer][0][0] * level4_new_1 + self.alphas_network[layer][0][1] * level4_new_2
+                weight = F.softmax(self.alphas_network[layer][0][:2]) * 2/3
+                level4_new = weight[0] * level4_new_1 + weight[1] * level4_new_2
 
                 level8_new_1 = self.cells[count] (self.level_8[-2], self.level_4[-1], weight_cells)
                 count += 1
                 level8_new_2 = self.cells[count] (self.level_8[-2], self.level_8[-1], weight_cells)
                 count += 1
-                # print (self.level_8[-1].size(),self.level_16[-1].size())
                 level8_new_3 = self.cells[count] (self.level_8[-2], self.level_16[-1], weight_cells)
                 count += 1
-                level8_new = self.alphas_network[layer][1][0] * level8_new_1 + self.alphas_network[layer][1][1] * level8_new_2 + self.alphas_network[layer][1][2] * level8_new_3
+                weight = F.softmax(self.alphas_network[layer][1])
+                level8_new = weight[0] * level8_new_1 + weight[1] * level8_new_2 + weight[2] * level8_new_3
 
                 level16_new_1 = self.cells[count] (None, self.level_8[-1], weight_cells)
                 count += 1
                 level16_new_2 = self.cells[count] (None, self.level_16[-1], weight_cells)
                 count += 1
-                level16_new = self.alphas_network[layer][2][0] * level16_new_1 + self.alphas_network[layer][2][1] * level16_new_2
+                weight = F.softmax(self.alphas_network[layer][2][:2]) * 2/3
+                level16_new = weight[0] * level16_new_1 + weight[1] * level16_new_2
 
 
-                level32_new = self.cells[count] (None, self.level_16[-1], weight_cells)
-                level32_new = level32_new * self.alphas_network[layer][2][2]
+                level32_new = self.cells[count] (None, self.level_16[-1], weight_cells) * 1/3
                 count += 1
 
                 self.level_4.append (level4_new)
@@ -244,7 +243,8 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level4_new_2 = self.cells[count] (self.level_4[-2], self.level_8[-1], weight_cells)
                 count += 1
-                level4_new = self.alphas_network[layer][0][0] * level4_new_1 + self.alphas_network[layer][0][1] * level4_new_2
+                weight = F.softmax(self.alphas_network[layer][0][:2]) * 2/3
+                level4_new = weight[0] * level4_new_1 + weight[1] * level4_new_2
 
                 level8_new_1 = self.cells[count] (self.level_8[-2], self.level_4[-1], weight_cells)
                 count += 1
@@ -252,7 +252,8 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level8_new_3 = self.cells[count] (self.level_8[-2], self.level_16[-1], weight_cells)
                 count += 1
-                level8_new = self.alphas_network[layer][1][0] * level8_new_1 + self.alphas_network[layer][1][1] * level8_new_2 + self.alphas_network[layer][1][2] * level8_new_3
+                weight = F.softmax(self.alphas_network[layer][1])
+                level8_new = weight[0] * level8_new_1 + weight[1] * level8_new_2 + weight[2] * level8_new_3
 
                 level16_new_1 = self.cells[count] (self.level_16[-2], self.level_8[-1], weight_cells)
                 count += 1
@@ -260,14 +261,16 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level16_new_3 = self.cells[count] (self.level_16[-2], self.level_32[-1], weight_cells)
                 count += 1
-                level16_new = self.alphas_network[layer][2][0] * level16_new_1 + self.alphas_network[layer][2][1] * level16_new_2 + self.alphas_network[layer][2][2] * level16_new_3
+                weight = F.softmax(self.alphas_network[layer][2])
+                level16_new = weight[0] * level16_new_1 + weight[1] * level16_new_2 + weight[2] * level16_new_3
 
 
                 level32_new_1 = self.cells[count] (None, self.level_16[-1], weight_cells)
                 count += 1
                 level32_new_2 = self.cells[count] (None, self.level_32[-1], weight_cells)
                 count += 1
-                level32_new = self.alphas_network[layer][3][0] * level32_new_1 + self.alphas_network[layer][3][1] * level32_new_2
+                weight = F.softmax(self.alphas_network[layer][3][:2]) * 2/3
+                level32_new = weight[0] * level32_new_1 + weight[1] * level32_new_2
 
 
                 self.level_4.append (level4_new)
@@ -281,7 +284,8 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level4_new_2 = self.cells[count] (self.level_4[-2], self.level_8[-1], weight_cells)
                 count += 1
-                level4_new = self.alphas_network[layer][0][0] * level4_new_1 + self.alphas_network[layer][0][1] * level4_new_2
+                weight = F.softmax(self.alphas_network[layer][0][:2]) * 2/3
+                level4_new = weight[0] * level4_new_1 + weight[1] * level4_new_2
 
                 level8_new_1 = self.cells[count] (self.level_8[-2], self.level_4[-1], weight_cells)
                 count += 1
@@ -289,7 +293,8 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level8_new_3 = self.cells[count] (self.level_8[-2], self.level_16[-1], weight_cells)
                 count += 1
-                level8_new = self.alphas_network[layer][1][0] * level8_new_1 + self.alphas_network[layer][1][1] * level8_new_2 + self.alphas_network[layer][1][2] * level8_new_3
+                weight = F.softmax(self.alphas_network[layer][1])
+                level8_new = weight[0] * level8_new_1 + weight[1] * level8_new_2 + weight[2] * level8_new_3
 
                 level16_new_1 = self.cells[count] (self.level_16[-2], self.level_8[-1], weight_cells)
                 count += 1
@@ -297,20 +302,26 @@ class AutoDeeplab (nn.Module) :
                 count += 1
                 level16_new_3 = self.cells[count] (self.level_16[-2], self.level_32[-1], weight_cells)
                 count += 1
-                level16_new = self.alphas_network[layer][2][0] * level16_new_1 + self.alphas_network[layer][2][1] * level16_new_2 + self.alphas_network[layer][2][2] * level16_new_3
+                weight = F.softmax(self.alphas_network[layer][2])
+                level16_new = weight[0] * level16_new_1 + weight[1] * level16_new_2 + weight[2] * level16_new_3
 
 
                 level32_new_1 = self.cells[count] (self.level_32[-2], self.level_16[-1], weight_cells)
                 count += 1
                 level32_new_2 = self.cells[count] (self.level_32[-2], self.level_32[-1], weight_cells)
                 count += 1
-                level32_new = self.alphas_network[layer][3][0] * level32_new_1 + self.alphas_network[layer][3][1] * level32_new_2
+                weight = F.softmax(self.alphas_network[layer][3][:2]) * 2/3
+                level32_new = weight[0] * level32_new_1 + weight[1] * level32_new_2
 
 
                 self.level_4.append (level4_new)
                 self.level_8.append (level8_new)
                 self.level_16.append (level16_new)
                 self.level_32.append (level32_new)
+            self.level_4 = self.level_4[-2:]
+            self.level_8 = self.level_8[-2:]
+            self.level_16 = self.level_16[-2:]
+            self.level_32 = self.level_32[-2:]
         # print (self.level_4[-1].size(),self.level_8[-1].size(),self.level_16[-1].size(),self.level_32[-1].size())
         # concate_feature_map = torch.cat ([self.level_4[-1], self.level_8[-1],self.level_16[-1], self.level_32[-1]], 1)
         aspp_result_4 = self.aspp_4 (self.level_4[-1])
@@ -357,16 +368,13 @@ class AutoDeeplab (nn.Module) :
                 print ('begin0')
                 num = 0
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * 1/3, curr_result, 0)
                     curr_result.pop ()
                     print ('end0-1')
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * 1/3, curr_result, 1)
                     curr_result.pop ()
 
             elif layer == 1 :
@@ -374,35 +382,32 @@ class AutoDeeplab (nn.Module) :
 
                 num = 0
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 0)
                     curr_result.pop ()
                     print ('end1-1')
 
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][1][:2]).numpy() * 2/3
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 1)
                     curr_result.pop ()
 
                 num = 1
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 0)
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    
+                    weight = F.softmax(weight_network[layer][1][:2]).numpy() * 2/3
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 1)
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][2]
+                    
+                    
                     curr_result.append ([num,2])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
-                    curr_value = curr_value / weight_network[layer][num][2]
+                    _parse (weight_network, layer + 1, curr_value * 1/3, curr_result, 2)
                     curr_result.pop ()
 
 
@@ -411,124 +416,121 @@ class AutoDeeplab (nn.Module) :
 
                 num = 0
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 0)
+                    
                     curr_result.pop ()
                     print ('end2-1')
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 1)
                     curr_value = curr_value / weight_network[layer][num][1]
                     curr_result.pop ()
 
                 num = 1
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 0)
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 1)
+                    
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][2]
+                    weight = F.softmax(weight_network[layer][2][:2]).numpy() * 2/3
                     curr_result.append ([num,2])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
-                    curr_value = curr_value / weight_network[layer][num][2]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 2)
+                    
                     curr_result.pop ()
 
                 num = 2
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[2], curr_result, 1)
+                    
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][2][:2]).numpy() * 2/3
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 2)
+                    
                     curr_result.pop ()
-                    curr_value = curr_value * weight_network[layer][num][2]
+                    
                     curr_result.append ([num,2])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 3)
-                    curr_value = curr_value / weight_network[layer][num][2]
+                    _parse (weight_network, layer + 1, curr_value * 1/3, curr_result, 3)
                     curr_result.pop ()
             else :
 
                 num = 0
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 0)
+                    
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 1)
+                    
                     curr_result.pop ()
 
                 num = 1
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][0][:2]).numpy() * 2/3
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 0)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 0)
+                    
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 1)
+                    
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][2]
+                    weight = F.softmax(weight_network[layer][2]).numpy()
                     curr_result.append ([num,2])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
-                    curr_value = curr_value / weight_network[layer][num][2]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 2)
+                    
                     curr_result.pop ()
 
                 num = 2
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][1]).numpy()
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 1)
-                    curr_value = curr_value / weight_network[layer][num][0]
+                    _parse (weight_network, layer + 1, curr_value * weight[2], curr_result, 1)
+                    
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][2]).numpy()
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
-                    curr_value = curr_value / weight_network[layer][num][1]
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 2)
+                    
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][2]
+                    weight = F.softmax(weight_network[layer][3][:2]).numpy() * 2/3
                     curr_result.append ([num,2])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 3)
-                    curr_value = curr_value / weight_network[layer][num][2]
+                    _parse (weight_network, layer + 1, curr_value * weight[0], curr_result, 3)
+                    
                     curr_result.pop ()
 
                 num = 3
                 if last == num :
-                    curr_value = curr_value * weight_network[layer][num][0]
+                    weight = F.softmax(weight_network[layer][2]).numpy()
                     curr_result.append ([num,0])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 2)
+                    _parse (weight_network, layer + 1, curr_value * weight[2], curr_result, 2)
                     curr_value = curr_value / weight_network[layer][num][0]
                     curr_result.pop ()
 
-                    curr_value = curr_value * weight_network[layer][num][1]
+                    weight = F.softmax(weight_network[layer][3][:2]).numpy() * 2/3
                     curr_result.append ([num,1])
-                    _parse (weight_network, layer + 1, curr_value, curr_result, 3)
+                    _parse (weight_network, layer + 1, curr_value * weight[1], curr_result, 3)
                     curr_value = curr_value / weight_network[layer][num][1]
                     curr_result.pop ()
-        network_weight = F.softmax(self.alphas_network, dim=-1) * 5
-        network_weight = network_weight.data.cpu().numpy()
+        network_weight = self.alphas_network.detach().cpu()
         _parse (network_weight, 0, 1, [],0)
         print (max_prop)
         return best_result
